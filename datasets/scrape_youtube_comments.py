@@ -1,5 +1,6 @@
 from youtube_comment_downloader import YoutubeCommentDownloader
 import csv
+import os
 
 # Daftar video AI/otomasi vs pekerjaan - 6 video final (ID + EN, berita + opini + cerita personal + edukasi)
 
@@ -15,7 +16,14 @@ VIDEO_URLS = [
 # Dibatasi biar video #3 (yang komentarnya 47rb) nggak mendominasi dataset secara nggak proporsional.
 # Video dengan komentar < limit ini akan terambil semuanya (habis).
 MAX_COMMENTS_PER_VIDEO = 1500
-OUTPUT_FILE = "youtube_comments.csv"
+
+# Tentukan lokasi penyimpanan file CSV (Google Colab vs VSCode / Lokal)
+if os.path.exists('/content'):
+    OUTPUT_FILE = '/content/youtube_comments.csv'
+else:
+    # VSCode / Lokal: simpan langsung di dalam folder datasets
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in locals() else 'datasets'
+    OUTPUT_FILE = os.path.join(CURRENT_DIR, "youtube_comments.csv")
 
 downloader = YoutubeCommentDownloader()
 all_comments = []
