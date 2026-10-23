@@ -1,0 +1,5 @@
+# Rahasia (API key) - jangan pernah di-commit
+.env
+
+# Jupyter
+.ipynb_checkpoints/
