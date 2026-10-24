@@ -3,3 +3,8 @@
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Generated datasets & checkpoints
+datasets/label_sementara.csv
+datasets/youtube_comments_clean.csv
+datasets/youtube_comments_clean_EDA.csv
