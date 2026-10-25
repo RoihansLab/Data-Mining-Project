@@ -17,4 +17,4 @@ Folder ini berisi notebook dan artefak pemodelan Machine Learning untuk klasifik
 
 ## Dataset yang Digunakan
 Notebook ini secara otomatis membaca dataset final yang sudah berlabel dari folder `datasets/`:
-- `datasets/youtube_comments_label_claude_v2.csv` (3.929 komentar berlabel).
+- `datasets/youtube_comments_label_claude_v3.csv` (3.935 komentar berlabel).

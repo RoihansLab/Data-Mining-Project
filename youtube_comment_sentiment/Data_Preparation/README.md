@@ -4,7 +4,7 @@
 > Folder ini berisi langkah-langkah mengubah ribuan komentar YouTube yang berantakan menjadi **data bersih yang sudah diberi label sikap**, siap dipakai untuk melatih model klasifikasi.
 
 📓 Notebook utama: [`data_preparation_labeling.ipynb`](data_preparation_labeling.ipynb)
-📦 Hasil akhir: [`datasets/youtube_comments_label_claude_v2.csv`](../../datasets/) (3.929 komentar berlabel)
+📦 Hasil akhir: [`datasets/youtube_comments_label_claude_v3.csv`](../../datasets/) (3.935 komentar berlabel)
 
 ---
 
@@ -16,7 +16,7 @@ Notebook ini mengerjakan semuanya dalam 5 tahap:
 
 ```
 📥 Kumpulkan data  →  🔍 Kenali data  →  🧹 Bersihkan  →  📊 Eksplorasi  →  🏷️ Beri label
-   4.458 komentar                         3.929 komentar                    3.929 berlabel
+   4.458 komentar                         3.935 komentar                    3.935 berlabel
 ```
 
 ---
@@ -37,22 +37,23 @@ Ibarat mencuci sayur sebelum dimasak. Setiap masalah dicek dulu jumlahnya, baru 
 | Masalah yang ditemukan | Jumlah | Yang dilakukan |
 |---|---|---|
 | Baris yang dobel persis | 11 | dihapus |
+| Karakter tak terlihat | 273 | dibuang dari teks |
+| Spasi khusus (NBSP) | 896 | diganti spasi biasa |
 | Mention `@nama` | 923 | dibuang dari teks |
 | Link (URL) | 11 | dibuang dari teks |
-| Karakter tak terlihat | 273 | dibuang dari teks |
-| Spasi berlebih / baris baru | 1.616 | dirapikan |
-| Spam judi online | 33 | dihapus |
-| Isi komentar kembar | 59 | dihapus |
-| Komentar kurang dari 3 kata ("Up", "Gass") | 305 | dihapus |
+| Spasi berlebih / baris baru | 1.611 | dirapikan |
+| Spam judi online | 36 | dihapus |
+| Isi komentar kembar | 56 | dihapus |
+| Komentar kurang dari 3 kata ("Up", "Gass") | 299 | dihapus |
 | Bahasa tidak jelas | 121 | dihapus |
 | *Likes* berupa teks (`4,4K`) | 42 | diubah jadi angka (4.400) |
 
 Nama akun juga **diganti nomor** supaya identitas penulis terlindungi.
-Hasilnya: dari **4.458** tersisa **3.929 komentar bersih** (11,9% dibuang).
+Hasilnya: dari **4.458** tersisa **3.935 komentar bersih** (11,7% dibuang).
 
 ### Langkah 4 · Lihat polanya (Bab 4 · EDA)
 Sebelum memberi label, kita intip dulu isi datanya lewat grafik:
-- jumlah komentar per video dan per bahasa (Inggris 2.492, Indonesia 1.437),
+- jumlah komentar per video dan per bahasa (Inggris 2.494, Indonesia 1.441),
 - panjang komentar, pemakaian emoji dan tanda tanya/seru,
 - sebaran *likes*: **52% komentar tidak mendapat like sama sekali**, dan hanya 41 komentar yang tembus lebih dari 1.000 like.
 
@@ -66,7 +67,7 @@ Setiap komentar diberi salah satu dari 4 label berdasarkan **sikap penulis terha
 | 🔵 **netral** | membahas AI tapi tidak memihak | "Kalau AI digabung quantum computing gimana?" |
 | ⚪ **tidak relevan** | tidak membahas AI atau pekerjaan | "Bang bahas demo dong" |
 
-Melabeli 3.929 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan oleh **Claude Opus 5.5** (AI buatan Anthropic) lewat sesi chat, bukan lewat kode. Karena itu Bab 5 di notebook hanya berisi penjelasan. Tapi AI tidak langsung dipercaya: hasilnya diuji dulu.
+Melabeli 3.935 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan oleh **Claude Opus 5.5** (AI buatan Anthropic) lewat sesi chat, bukan lewat kode. Karena itu Bab 5 di notebook hanya berisi penjelasan. Tapi AI tidak langsung dipercaya: hasilnya diuji dulu.
 
 **a. Kunci jawaban (gold set).** 150 komentar dilabeli manual: 50 untuk **dev** (dipakai sebagai contoh untuk Claude) dan 100 untuk **test** (ujian akhir).
 
@@ -81,20 +82,22 @@ Melabeli 3.929 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan
 
 **d. Perbaiki panduan, labeli ulang.** Hasil putaran pertama dibandingkan dengan gold set, lalu panduan dipertegas untuk 5 kasus abu-abu (misalnya candaan soal robot mengambil pekerjaan = negatif) dan gold set direvisi menjadi `gold_set_v2.csv`. Pada uji buta 50 komentar dev, panduan baru mendapat macro-F1 **0,683** (panduan awal 0,634). Seluruh komentar lalu dilabeli ulang.
 
+**e. Perbaikan preprocessing.** Setelah pelabelan, pembersihan teks diperbaiki (spasi khusus di sekitar mention dan pola spam "Garuda Hoki"). Label lama digabungkan berdasarkan isi komentar, dan **154 komentar** yang teksnya berubah atau baru masuk dilabeli ulang dengan panduan yang sama. Asal setiap label dicatat di kolom `sumber_label` (`gold`, `claude_putaran2`, `claude_ulang_v3`).
+
 ---
 
 ## 🎯 Hasil Akhir
 
 | Label | Jumlah | Persen |
 |---|---|---|
-| ⚪ tidak relevan | 1.430 | 36,4% |
-| 🔴 negatif | 1.203 | 30,6% |
-| 🟢 positif | 680 | 17,3% |
-| 🔵 netral | 616 | 15,7% |
+| ⚪ tidak relevan | 1.427 | 36,3% |
+| 🔴 negatif | 1.199 | 30,5% |
+| 🟢 positif | 689 | 17,5% |
+| 🔵 netral | 620 | 15,8% |
 
-Kalau hanya menghitung komentar yang benar-benar membahas AI atau pekerjaan (2.499 komentar):
+Kalau hanya menghitung komentar yang benar-benar membahas AI atau pekerjaan (2.508 komentar):
 
-> **48,1% khawatir · 27,2% optimis · 24,6% netral**
+> **47,8% khawatir · 27,5% optimis · 24,7% netral**
 
 Artinya, warganet yang membahas isu ini **hampir separuhnya merasa khawatir**, jauh lebih banyak dibanding yang optimis terhadap AI yang menggantikan pekerjaan.
 
@@ -121,14 +124,14 @@ Penjelasan lengkapnya ada di notebook, bagian **"Cara Membaca Hasil Evaluasi"**.
 | `../../datasets/youtube_comments.csv` | data mentah hasil *scraping* (4.458 komentar) |
 | `../../datasets/gold_set_final.csv` | 150 komentar berlabel manual (kunci jawaban) |
 | `../../datasets/youtube_comments_clean_EDA.csv` | data bersih (dibuat oleh notebook, tidak ikut di GitHub) |
-| `../../datasets/youtube_comments_label_claude_v2.csv` | **hasil akhir**: data bersih + label dari Claude |
+| `../../datasets/youtube_comments_label_claude_v3.csv` | **hasil akhir**: data bersih + label dari Claude, dengan kolom `sumber_label` yang mencatat asal setiap label |
 | `model_sikap_ai_terbaik.pkl` | model klasifikasi yang disimpan |
 
 ---
 
 ## ▶️ Cara Menjalankan
 
-1. **Buka notebook** di VSCode atau Google Colab, lalu jalankan sel dari atas ke bawah. Tidak perlu API key, karena label sudah tersedia di `youtube_comments_label_claude_v2.csv`.
+1. **Buka notebook** di VSCode atau Google Colab, lalu jalankan sel dari atas ke bawah. Tidak perlu API key, karena label sudah tersedia di `youtube_comments_label_claude_v3.csv`.
 2. **Bab 1–4** selesai dalam hitungan detik. **Bab 5** hanya berisi penjelasan, tidak ada kode yang dijalankan.
 3. **Bab 6–9** butuh beberapa menit. Stemming sekitar 2–3 menit, dan deep learning (Bab 8.2) otomatis memakai GPU NVIDIA bila tersedia.
 
