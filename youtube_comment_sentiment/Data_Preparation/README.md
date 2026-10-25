@@ -4,7 +4,7 @@
 > Folder ini berisi langkah-langkah mengubah ribuan komentar YouTube yang berantakan menjadi **data bersih yang sudah diberi label sikap**, siap dipakai untuk melatih model klasifikasi.
 
 📓 Notebook utama: [`data_preparation_labeling.ipynb`](data_preparation_labeling.ipynb)
-📦 Hasil akhir: [`datasets/youtube_comments_label_claude.csv`](../../datasets/) (3.929 komentar berlabel)
+📦 Hasil akhir: [`datasets/youtube_comments_label_claude_v2.csv`](../../datasets/) (3.929 komentar berlabel)
 
 ---
 
@@ -79,22 +79,24 @@ Melabeli 3.929 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan
 
 **c. Labeli semuanya.** 3.929 komentar dibagi menjadi 20 kelompok berisi 200 komentar dan dilabeli satu per satu kelompok. Setelah itu hasilnya dicek: setiap komentar harus punya tepat satu label yang sah.
 
+**d. Perbaiki panduan, labeli ulang.** Hasil putaran pertama dibandingkan dengan gold set, lalu panduan dipertegas untuk 5 kasus abu-abu (misalnya candaan soal robot mengambil pekerjaan = negatif) dan gold set direvisi menjadi `gold_set_v2.csv`. Pada uji buta 50 komentar dev, panduan baru mendapat macro-F1 **0,683** (panduan awal 0,634). Seluruh komentar lalu dilabeli ulang.
+
 ---
 
 ## 🎯 Hasil Akhir
 
 | Label | Jumlah | Persen |
 |---|---|---|
-| ⚪ tidak relevan | 1.423 | 36,2% |
-| 🔴 negatif | 988 | 25,1% |
-| 🔵 netral | 868 | 22,1% |
-| 🟢 positif | 650 | 16,5% |
+| ⚪ tidak relevan | 1.430 | 36,4% |
+| 🔴 negatif | 1.203 | 30,6% |
+| 🟢 positif | 680 | 17,3% |
+| 🔵 netral | 616 | 15,7% |
 
-Kalau hanya menghitung komentar yang benar-benar membahas AI atau pekerjaan (2.506 komentar):
+Kalau hanya menghitung komentar yang benar-benar membahas AI atau pekerjaan (2.499 komentar):
 
-> **39,4% khawatir · 34,6% netral · 25,9% optimis**
+> **48,1% khawatir · 27,2% optimis · 24,6% netral**
 
-Artinya, warganet lebih banyak merasa **khawatir atau belum memihak** dibanding optimis terhadap AI yang menggantikan pekerjaan.
+Artinya, warganet yang membahas isu ini **hampir separuhnya merasa khawatir**, jauh lebih banyak dibanding yang optimis terhadap AI yang menggantikan pekerjaan.
 
 ---
 
@@ -119,14 +121,14 @@ Penjelasan lengkapnya ada di notebook, bagian **"Cara Membaca Hasil Evaluasi"**.
 | `../../datasets/youtube_comments.csv` | data mentah hasil *scraping* (4.458 komentar) |
 | `../../datasets/gold_set_final.csv` | 150 komentar berlabel manual (kunci jawaban) |
 | `../../datasets/youtube_comments_clean_EDA.csv` | data bersih (dibuat oleh notebook, tidak ikut di GitHub) |
-| `../../datasets/youtube_comments_label_claude.csv` | **hasil akhir**: data bersih + label dari Claude |
+| `../../datasets/youtube_comments_label_claude_v2.csv` | **hasil akhir**: data bersih + label dari Claude |
 | `model_sikap_ai_terbaik.pkl` | model klasifikasi yang disimpan |
 
 ---
 
 ## ▶️ Cara Menjalankan
 
-1. **Buka notebook** di VSCode atau Google Colab, lalu jalankan sel dari atas ke bawah. Tidak perlu API key, karena label sudah tersedia di `youtube_comments_label_claude.csv`.
+1. **Buka notebook** di VSCode atau Google Colab, lalu jalankan sel dari atas ke bawah. Tidak perlu API key, karena label sudah tersedia di `youtube_comments_label_claude_v2.csv`.
 2. **Bab 1–4** selesai dalam hitungan detik. **Bab 5** hanya berisi penjelasan, tidak ada kode yang dijalankan.
 3. **Bab 6–9** butuh beberapa menit. Stemming sekitar 2–3 menit, dan deep learning (Bab 8.2) otomatis memakai GPU NVIDIA bila tersedia.
 
