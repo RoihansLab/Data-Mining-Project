@@ -4,7 +4,7 @@
 > Folder ini berisi langkah-langkah mengubah ribuan komentar YouTube yang berantakan menjadi **data bersih yang sudah diberi label sikap**, siap dipakai untuk melatih model klasifikasi.
 
 📓 Notebook utama: [`data_preparation_labeling.ipynb`](data_preparation_labeling.ipynb)
-📦 Hasil akhir: [`datasets/youtube_comments_gold.csv`](../../datasets/) (3.929 komentar berlabel)
+📦 Hasil akhir: [`datasets/youtube_comments_label_claude.csv`](../../datasets/) (3.929 komentar berlabel)
 
 ---
 
@@ -66,20 +66,18 @@ Setiap komentar diberi salah satu dari 4 label berdasarkan **sikap penulis terha
 | 🔵 **netral** | membahas AI tapi tidak memihak | "Kalau AI digabung quantum computing gimana?" |
 | ⚪ **tidak relevan** | tidak membahas AI atau pekerjaan | "Bang bahas demo dong" |
 
-Melabeli 3.929 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan **otomatis oleh AI**. Tapi AI tidak langsung dipercaya: hasilnya diuji dulu.
+Melabeli 3.929 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan oleh **Claude Opus 5.5** (AI buatan Anthropic) lewat sesi chat, bukan lewat kode. Karena itu Bab 5 di notebook hanya berisi penjelasan. Tapi AI tidak langsung dipercaya: hasilnya diuji dulu.
 
-**a. Buat kunci jawaban (gold set).** 150 komentar dilabeli manual: 50 untuk **dev** (latihan soal, dipakai untuk memilih model) dan 100 untuk **test** (ujian akhir, dipakai sekali untuk menilai).
+**a. Kunci jawaban (gold set).** 150 komentar dilabeli manual: 50 untuk **dev** (dipakai sebagai contoh untuk Claude) dan 100 untuk **test** (ujian akhir).
 
-**b. Adu dua model.**
+**b. Ujian buta.** Claude melabeli 100 komentar test tanpa melihat jawabannya:
 
-| Model | Cara kerja | Berjalan di | Skor dev (macro-F1) |
-|---|---|---|---|
-| **Nemotron 3 Ultra** (550 miliar parameter) | diberi aturan + 10 contoh berlabel (*few-shot*) | server NVIDIA lewat API | **0,474** 🏆 |
-| **mDeBERTa-v3** (±280 juta parameter) | mencocokkan komentar dengan kalimat hipotesis (*zero-shot*) | laptop sendiri (GPU) | 0,313 |
+| Pelabel | Skor test (macro-F1) |
+|---|---|
+| **Claude Opus 5.5** | **0,595** 🏆 |
+| Nemotron 3 Ultra (dicoba sebelumnya) | 0,522 |
 
-**c. Ujian akhir.** Nemotron diuji sekali pada 100 komentar test: **macro-F1 = 0,522** (akurasi 52%). Angka ini jauh di atas tebakan asal (34%), dan kesalahannya kebanyakan terjadi di antara label yang batasnya tipis (netral vs tidak relevan), bukan antara positif dan negatif.
-
-**d. Labeli semuanya.** Nemotron melabeli seluruh 3.929 komentar. Karena server gratis NVIDIA membatasi jumlah permintaan, prosesnya sekitar **20 detik per komentar**. Kodenya dibuat tahan banting: kalau kena batas atau internet putus, ia menunggu lalu mencoba lagi, dan setiap hasil langsung disimpan sehingga bisa dilanjutkan kapan saja tanpa mengulang dari awal.
+**c. Labeli semuanya.** 3.929 komentar dibagi menjadi 20 kelompok berisi 200 komentar dan dilabeli satu per satu kelompok. Setelah itu hasilnya dicek: setiap komentar harus punya tepat satu label yang sah.
 
 ---
 
@@ -87,14 +85,14 @@ Melabeli 3.929 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan
 
 | Label | Jumlah | Persen |
 |---|---|---|
-| ⚪ tidak relevan | 1.091 | 27,8% |
-| 🔴 negatif | 1.039 | 26,4% |
-| 🔵 netral | 1.005 | 25,6% |
-| 🟢 positif | 794 | 20,2% |
+| ⚪ tidak relevan | 1.423 | 36,2% |
+| 🔴 negatif | 988 | 25,1% |
+| 🔵 netral | 868 | 22,1% |
+| 🟢 positif | 650 | 16,5% |
 
-Kalau hanya menghitung komentar yang benar-benar membahas AI atau pekerjaan (2.838 komentar):
+Kalau hanya menghitung komentar yang benar-benar membahas AI atau pekerjaan (2.506 komentar):
 
-> **36,6% khawatir · 35,4% netral · 28,0% optimis**
+> **39,4% khawatir · 34,6% netral · 25,9% optimis**
 
 Artinya, warganet lebih banyak merasa **khawatir atau belum memihak** dibanding optimis terhadap AI yang menggantikan pekerjaan.
 
@@ -117,34 +115,31 @@ Penjelasan lengkapnya ada di notebook, bagian **"Cara Membaca Hasil Evaluasi"**.
 
 | Berkas | Isi |
 |---|---|
-| `data_preparation_labeling.ipynb` | notebook utama (Bab 1–5) |
+| `data_preparation_labeling.ipynb` | notebook utama: persiapan data dan pelabelan (Bab 1–5), lalu text preprocessing sampai klasifikasi (Bab 6–9) |
 | `../../datasets/youtube_comments.csv` | data mentah hasil *scraping* (4.458 komentar) |
 | `../../datasets/gold_set_final.csv` | 150 komentar berlabel manual (kunci jawaban) |
 | `../../datasets/youtube_comments_clean_EDA.csv` | data bersih (dibuat oleh notebook, tidak ikut di GitHub) |
-| `../../datasets/youtube_comments_gold.csv` | **hasil akhir**: data bersih + label |
+| `../../datasets/youtube_comments_label_claude.csv` | **hasil akhir**: data bersih + label dari Claude |
+| `model_sikap_ai_terbaik.pkl` | model klasifikasi yang disimpan |
 
 ---
 
 ## ▶️ Cara Menjalankan
 
-1. **Siapkan API key NVIDIA** (gratis) dari [build.nvidia.com](https://build.nvidia.com), lalu simpan di file `.env` di folder utama proyek:
-   ```
-   NVIDIA_API_KEY_NEMOTRON_3_ULTRA=nvapi-xxxxxxxx
-   ```
-   File `.env` tidak ikut ter-*upload* ke GitHub, jadi API key tetap aman.
-2. **Buka notebook** di VSCode atau Google Colab, lalu jalankan sel dari atas ke bawah.
-3. **Bab 1–4** selesai dalam hitungan detik. **Bab 5.8** (pelabelan seluruh data) butuh waktu lama karena batas permintaan API; kalau terputus, cukup jalankan sel itu lagi dan ia akan melanjutkan dari komentar terakhir.
-4. **mDeBERTa** (Bab 5.6) otomatis memakai GPU NVIDIA bila tersedia.
+1. **Buka notebook** di VSCode atau Google Colab, lalu jalankan sel dari atas ke bawah. Tidak perlu API key, karena label sudah tersedia di `youtube_comments_label_claude.csv`.
+2. **Bab 1–4** selesai dalam hitungan detik. **Bab 5** hanya berisi penjelasan, tidak ada kode yang dijalankan.
+3. **Bab 6–9** butuh beberapa menit. Stemming sekitar 2–3 menit, dan deep learning (Bab 8.2) otomatis memakai GPU NVIDIA bila tersedia.
 
 ---
 
 ## ⚠️ Keterbatasan (Jujur Saja)
 
-- Label dibuat oleh AI, bukan manusia. Dengan macro-F1 sekitar 0,52, persentase di atas adalah **perkiraan**, bukan angka pasti.
+- Label dibuat oleh AI, bukan manusia. Dengan macro-F1 sekitar 0,6, persentase di atas adalah **perkiraan**, bukan angka pasti.
+- Komentar yang lebih dari 600 karakter hanya dibaca 600 karakter pertamanya saat dilabeli, dan pelabelan lewat chat tidak bisa diulang persis.
 - Kunci jawaban (150 komentar) dilabeli oleh **satu orang**, jadi kesepakatan antar-penilai belum diukur.
 - Komentar diambil dengan urutan "paling populer", sehingga komentar yang banyak di-*like* lebih terwakili.
 - Data hanya dari 6 video, jadi hasilnya belum tentu mewakili seluruh pengguna internet.
 
 ---
 
-➡️ **Tahap berikutnya:** data berlabel ini dipakai di folder [`../Classifcation`](../Classifcation) untuk melatih dan membandingkan model klasifikasi (Decision Tree, Naïve Bayes, Random Forest, dan Logistic Regression).
+➡️ **Tahap berikutnya:** data berlabel ini langsung dipakai di notebook yang sama, mulai **Bab 6 (Text Preprocessing)** sampai **Bab 9 (Optimasi)**, untuk melatih dan membandingkan model klasifikasi (Decision Tree, Naïve Bayes, Random Forest, Logistic Regression, dan lainnya).
