@@ -4,7 +4,7 @@
 > Folder ini berisi langkah-langkah mengubah ribuan komentar YouTube yang berantakan menjadi **data bersih yang sudah diberi label sikap**, siap dipakai untuk melatih model klasifikasi.
 
 📓 Notebook utama: [`data_preparation_labeling.ipynb`](data_preparation_labeling.ipynb)
-📦 Hasil akhir: [`datasets/youtube_comments_label_claude_v3.csv`](../../datasets/) (3.935 komentar berlabel)
+📦 Hasil akhir: [`datasets/youtube_comments_label_final.csv`](../../datasets/youtube_comments_label_final.csv) (3.935 komentar berlabel)
 
 ---
 
@@ -29,6 +29,7 @@ Di sini juga dipasang **`SEED = 42`**, semacam "kunci" supaya hasil yang acak se
 
 ### Langkah 2 · Kenali datanya (Bab 2)
 Data mentah diambil dengan skrip [`datasets/scrape_youtube_comments.py`](../../datasets/scrape_youtube_comments.py) dari **6 video** (2 berbahasa Indonesia, 4 berbahasa Inggris), maksimal 1.500 komentar per video.
+Video dipilih secara **purposif**: bertema sama (AI menggantikan pekerjaan), mencakup dua bahasa, dan punya cukup banyak komentar. Jadi hasilnya adalah **studi kasus** pada 6 video ini.
 Setiap komentar punya 5 informasi: video asal, nama akun, isi komentar, jumlah *like*, dan waktu.
 
 ### Langkah 3 · Bersihkan datanya (Bab 3)
@@ -58,31 +59,37 @@ Sebelum memberi label, kita intip dulu isi datanya lewat grafik:
 - sebaran *likes*: **52% komentar tidak mendapat like sama sekali**, dan hanya 41 komentar yang tembus lebih dari 1.000 like.
 
 ### Langkah 5 · Beri label (Bab 5)
-Setiap komentar diberi salah satu dari 4 label berdasarkan **sikap penulis terhadap AI yang menggantikan pekerjaan**:
+Setiap komentar diberi salah satu dari **3 label** berdasarkan **sikap penulis terhadap AI dan pekerjaan**:
 
 | Label | Artinya | Contoh (ilustrasi) |
 |---|---|---|
-| 🟢 **positif** | tidak merasa terancam, optimis | "AI cuma alat, yang penting kita mau belajar" |
-| 🔴 **negatif** | merasa terancam, khawatir | "Pull the plug. Nobody wants AI" |
-| 🔵 **netral** | membahas AI tapi tidak memihak | "Kalau AI digabung quantum computing gimana?" |
-| ⚪ **tidak relevan** | tidak membahas AI atau pekerjaan | "Bang bahas demo dong" |
+| 🟢 **positif** | tidak takut, optimis, atau mendukung | "AI cuma alat, yang penting kita mau belajar" |
+| 🔴 **negatif** | takut, khawatir, menolak, atau menyalahkan AI | "Takut banget kerjaan gue diambil AI" |
+| ⚪ **perlu ditinjau** | benar-benar ambigu: *off-topic*, pertanyaan netral, ucapan terima kasih, sindiran yang arahnya tidak jelas | "Bang bahas demo dong" |
 
-Melabeli 3.935 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan oleh **Claude Opus 5.5** (AI buatan Anthropic) lewat sesi chat, bukan lewat kode. Karena itu Bab 5 di notebook hanya berisi penjelasan. Tapi AI tidak langsung dipercaya: hasilnya diuji dulu.
+Aturan pentingnya: kalau komentar membahas pekerjaan atau dampak AI, label dipilih **positif atau negatif sesuai arah condongnya**. "Perlu ditinjau" hanya untuk yang benar-benar tidak bisa ditentukan.
 
-**a. Kunci jawaban (gold set).** 150 komentar dilabeli manual: 50 untuk **dev** (dipakai sebagai contoh untuk Claude) dan 100 untuk **test** (ujian akhir).
+**Kenapa "perlu ditinjau", bukan "netral"?** Banyak komentar berupa sindiran yang sikapnya tersirat: punya sikap, tetapi arahnya sulit dipastikan, jadi tidak tepat disebut netral. Label ini menandai komentar yang **layak ditinjau ulang oleh manusia**. "Positif" sendiri berarti **tidak memandang AI sebagai ancaman bagi pekerjaan**, bukan berarti senang.
 
-**b. Ujian buta.** Claude melabeli 100 komentar test tanpa melihat jawabannya:
+Pelabelan dikerjakan **gabungan manusia dan AI**:
 
-| Pelabel | Skor test (macro-F1) |
-|---|---|
-| **Claude Opus 5.5** | **0,595** 🏆 |
-| Nemotron 3 Ultra (dicoba sebelumnya) | 0,522 |
+| Tahap | Pelabel | Jumlah |
+|---|---|---|
+| Gold set | manual (manusia) | 150 |
+| Sampel acak | manual: pelabel 1 (200) dan pelabel 2 (99) | 299 |
+| Sisa komentar | **Claude Opus 5.5**, dengan 200 label pelabel 1 sebagai contoh patokan | 3.486 |
 
-**c. Labeli semuanya.** 3.929 komentar dibagi menjadi 20 kelompok berisi 200 komentar dan dilabeli satu per satu kelompok. Setelah itu hasilnya dicek: setiap komentar harus punya tepat satu label yang sah.
+Untuk 449 komentar berlabel manual, **label manusia yang dipakai**. Asal setiap label dicatat di kolom `sumber_label` (`manual` atau `claude`). Pelabelan oleh Claude dilakukan lewat sesi chat, bukan lewat kode. Kode di Bab 5 hanya dipakai untuk menguji kualitas label (5.3) dan mencari pola sikap (5.5).
 
-**d. Perbaiki panduan, labeli ulang.** Hasil putaran pertama dibandingkan dengan gold set, lalu panduan dipertegas untuk 5 kasus abu-abu (misalnya candaan soal robot mengambil pekerjaan = negatif) dan gold set direvisi menjadi `gold_set_v2.csv`. Pada uji buta 50 komentar dev, panduan baru mendapat macro-F1 **0,683** (panduan awal 0,634). Seluruh komentar lalu dilabeli ulang.
+**Kenapa dibantu LLM?** Untuk efisiensi: melabeli 3.935 komentar secara manual oleh tim kecil butuh waktu lama, jadi sebagian kecil dilabeli manual dan sisanya oleh LLM, lalu kualitasnya diuji terhadap label manusia. Uji coba awal memakai Qwen lewat API, tetapi dihentikan karena batasan akses API, lalu dilanjutkan dengan Claude Opus 5.5 lewat chat.
 
-**e. Perbaikan preprocessing.** Setelah pelabelan, pembersihan teks diperbaiki (spasi khusus di sekitar mention dan pola spam "Garuda Hoki"). Label lama digabungkan berdasarkan isi komentar, dan **154 komentar** yang teksnya berubah atau baru masuk dilabeli ulang dengan panduan yang sama. Asal setiap label dicatat di kolom `sumber_label` (`gold`, `claude_putaran2`, `claude_ulang_v3`).
+**Uji kualitas label.** 99 label pelabel 2 tidak pernah dijadikan contoh untuk Claude, jadi dipakai sebagai uji buta:
+
+| Dibandingkan dengan 99 label manusia | Macro-F1 | Akurasi | Kappa |
+|---|---|---|---|
+| Label Claude Opus 5.5 | 0,676 | 0,707 | 0,506 (kesepakatan sedang) |
+
+Angka ini dihitung ulang dengan kode di Bab 5.3. Panduan diperbaiki beberapa kali: kecocokan dengan manusia naik dari kappa sekitar 0,39 (versi awal, 4 label) menjadi sekitar 0,51 (v7–v8, 3 label). Versi akhir (v8) dipilih karena paling cocok dengan label manusia, bukan berdasarkan skor model.
 
 ---
 
@@ -90,16 +97,20 @@ Melabeli 3.935 komentar secara manual butuh waktu lama, jadi pelabelan dilakukan
 
 | Label | Jumlah | Persen |
 |---|---|---|
-| ⚪ tidak relevan | 1.427 | 36,3% |
-| 🔴 negatif | 1.199 | 30,5% |
-| 🟢 positif | 689 | 17,5% |
-| 🔵 netral | 620 | 15,8% |
+| ⚪ perlu ditinjau | 2.342 | 59,5% |
+| 🔴 negatif | 938 | 23,8% |
+| 🟢 positif | 655 | 16,6% |
 
-Kalau hanya menghitung komentar yang benar-benar membahas AI atau pekerjaan (2.508 komentar):
+Kalau hanya menghitung komentar yang punya sikap jelas (1.593 komentar):
 
-> **47,8% khawatir · 27,5% optimis · 24,7% netral**
+> **58,9% khawatir atau menolak · 41,1% optimis**
 
-Artinya, warganet yang membahas isu ini **hampir separuhnya merasa khawatir**, jauh lebih banyak dibanding yang optimis terhadap AI yang menggantikan pekerjaan.
+Artinya, warganet yang bersikap terhadap isu ini **lebih banyak yang khawatir** dibanding yang optimis terhadap AI yang menggantikan pekerjaan.
+
+**Pola tersembunyi (Bab 5.5):**
+- 🎬 **Judul video memengaruhi sikap.** Video berjudul menakutkan ("KIAMAT KERJA", "unemployment soars") punya komentar negatif terbanyak (35–37%), sedangkan video CGP Grey hampir seluruhnya candaan atau *off-topic* (84,5% perlu ditinjau).
+- 📏 **Makin panjang komentar, makin jelas sikapnya.** Komentar 1–5 kata 87% "perlu ditinjau", sedangkan komentar lebih dari 50 kata 64% punya sikap jelas.
+- 👍 **Penonton lebih suka candaan.** Dari 50 komentar dengan *likes* terbanyak, 38 berlabel "perlu ditinjau", hanya 8 negatif dan 4 positif.
 
 ---
 
@@ -110,9 +121,8 @@ Bayangkan memetik **durian matang** di kebun. Di kebun ada 10 yang matang, kamu 
 - **Precision**: dari yang kamu petik, berapa yang benar? → 6 dari 8 = **75%**
 - **Recall**: dari yang matang di kebun, berapa yang berhasil kamu petik? → 6 dari 10 = **60%**
 - **F1-score**: nilai gabungan keduanya, tidak bisa curang dengan bagus di satu sisi saja.
-- **Macro-F1**: rata-rata F1 dari keempat label, dengan setiap label dianggap sama penting. Ini ukuran utama di proyek ini.
-
-Penjelasan lengkapnya ada di notebook, bagian **"Cara Membaca Hasil Evaluasi"**.
+- **Macro-F1**: rata-rata F1 dari ketiga label, dengan setiap label dianggap sama penting. Ini ukuran utama di proyek ini.
+- **Kappa**: seberapa sering dua pelabel sepakat setelah dikurangi kesepakatan yang terjadi karena kebetulan (0 = asal tebak, 1 = sempurna).
 
 ---
 
@@ -120,31 +130,33 @@ Penjelasan lengkapnya ada di notebook, bagian **"Cara Membaca Hasil Evaluasi"**.
 
 | Berkas | Isi |
 |---|---|
-| `data_preparation_labeling.ipynb` | notebook utama: persiapan data dan pelabelan (Bab 1–5), lalu text preprocessing sampai klasifikasi (Bab 6–9) |
+| `data_preparation_labeling.ipynb` | notebook persiapan data dan pelabelan (Bab 1–5) |
 | `../../datasets/youtube_comments.csv` | data mentah hasil *scraping* (4.458 komentar) |
-| `../../datasets/gold_set_final.csv` | 150 komentar berlabel manual (kunci jawaban) |
 | `../../datasets/youtube_comments_clean_EDA.csv` | data bersih (dibuat oleh notebook, tidak ikut di GitHub) |
-| `../../datasets/youtube_comments_label_claude_v3.csv` | **hasil akhir**: data bersih + label dari Claude, dengan kolom `sumber_label` yang mencatat asal setiap label |
-| `model_sikap_ai_terbaik.pkl` | model klasifikasi yang disimpan |
+| `../../datasets/youtube_comments_label_final.csv` | **hasil akhir**: data bersih + label final, dengan kolom `sumber_label` (`manual` atau `claude`) |
+| `../../datasets/label_manual_299.csv` | 299 label manual (pelabel 1 dan pelabel 2), dipakai untuk uji kualitas label (Bab 5.3) |
+| `../../datasets/label_manual_300.xlsx` | lembar pelabelan manual beserta sheet **Panduan** pelabelan |
+| `../../datasets/youtube_comments_label_claude*.csv` | label Claude per versi panduan (v1, v2, v3, v6, v7, v8); v8 adalah versi akhir (Bab 5.3) |
 
 ---
 
 ## ▶️ Cara Menjalankan
 
-1. **Buka notebook** di VSCode atau Google Colab, lalu jalankan sel dari atas ke bawah. Tidak perlu API key, karena label sudah tersedia di `youtube_comments_label_claude_v3.csv`.
-2. **Bab 1–4** selesai dalam hitungan detik. **Bab 5** hanya berisi penjelasan, tidak ada kode yang dijalankan.
-3. **Bab 6–9** butuh beberapa menit. Stemming sekitar 2–3 menit, dan deep learning (Bab 8.2) otomatis memakai GPU NVIDIA bila tersedia.
+1. **Buka notebook** di **Google Colab** atau **Antigravity**, lalu jalankan sel dari atas ke bawah. Data mentah diambil langsung dari GitHub, jadi tidak perlu upload file (butuh koneksi internet). Tidak perlu API key, karena label sudah tersedia di `youtube_comments_label_final.csv`.
+2. **Bab 1–4** selesai dalam hitungan detik sampai beberapa menit. **Bab 5** sebagian besar berisi penjelasan; kodenya (5.3 dan 5.5) hanya membaca label dari GitHub, jadi cepat.
 
 ---
 
 ## ⚠️ Keterbatasan (Jujur Saja)
 
-- Label dibuat oleh AI, bukan manusia. Dengan macro-F1 sekitar 0,6, persentase di atas adalah **perkiraan**, bukan angka pasti.
-- Komentar yang lebih dari 600 karakter hanya dibaca 600 karakter pertamanya saat dilabeli, dan pelabelan lewat chat tidak bisa diulang persis.
-- Kunci jawaban (150 komentar) dilabeli oleh **satu orang**, jadi kesepakatan antar-penilai belum diukur.
+- Sebagian besar label (sekitar 89%) dibuat oleh AI, dengan kecocokan **sedang** terhadap manusia (kappa 0,506). Persentase di atas adalah **perkiraan**, bukan angka pasti.
+- Label manual dibuat sebelum panduan final dipertegas, dan setiap komentar manual hanya dilabeli satu orang, jadi kesepakatan antar-manusia belum diukur.
+- Komentar yang sangat panjang hanya dibaca sekitar 400–450 karakter pertamanya oleh Claude, dan pelabelan lewat chat tidak bisa diulang persis.
 - Komentar diambil dengan urutan "paling populer", sehingga komentar yang banyak di-*like* lebih terwakili.
-- Data hanya dari 6 video, jadi hasilnya belum tentu mewakili seluruh pengguna internet.
+- Data hanya dari 6 video yang dipilih secara purposif (studi kasus), jadi hasilnya belum tentu mewakili seluruh pengguna internet.
+- Pada pohon keputusan, negatif dicek lebih dulu daripada positif, sehingga komentar yang condong ke dua arah cenderung berlabel negatif. Porsi negatif (58,9%) mungkin sedikit lebih tinggi dari kenyataannya.
+- Panduan belum punya aturan khusus untuk komentar campuran (khawatir sekaligus optimis) dan keluhan soal pekerjaan yang tidak menyebut AI.
 
 ---
 
-➡️ **Tahap berikutnya:** data berlabel ini langsung dipakai di notebook yang sama, mulai **Bab 6 (Text Preprocessing)** sampai **Bab 9 (Optimasi)**, untuk melatih dan membandingkan model klasifikasi (Decision Tree, Naïve Bayes, Random Forest, Logistic Regression, dan lainnya).
+➡️ **Tahap berikutnya:** data berlabel ini dipakai di notebook [`classification_modeling.ipynb`](../Classification/classification_modeling.ipynb), mulai **Bab 6 (Text Preprocessing)** sampai **Bab 10 (Kesimpulan)**, untuk melatih dan menguji model klasifikasi (model akhir: **e5-large + SVM linear**).
