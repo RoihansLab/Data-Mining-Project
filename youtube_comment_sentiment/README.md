@@ -12,6 +12,6 @@ Proyek Data Mining (Kelompok 9, TI-3C, Politeknik Negeri Semarang) untuk menjawa
 
 **Hasil singkat:**
 - Dari 1.593 komentar yang bersikap jelas, **58,9% khawatir atau menolak** dan 41,1% optimis.
-- Model akhir **e5-large + SVM linear**: macro-F1 **0,640**, akurasi **0,716**, good fit, dan robust di video baru (macro-F1 0,590).
+- Model akhir **e5-large + SVM linear**: macro-F1 **0,639**, akurasi **0,715**, good fit, dan robust di video baru (macro-F1 0,590).
 
 Semua notebook bisa dijalankan di **Google Colab** maupun **Antigravity**. Dataset diambil langsung dari folder [`datasets/`](../datasets/) di GitHub.

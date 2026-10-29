@@ -31,15 +31,15 @@ Semua sumber acak dikunci dengan **`random_state=42`**, jadi hasilnya selalu sam
 
 | Metrik | Nilai |
 |---|---|
-| Macro-F1 data uji | **0,640** |
-| Akurasi data uji | **0,716** |
-| Macro-F1 CV (5-fold) | 0,648 ± 0,021 |
+| Macro-F1 data uji | **0,639** |
+| Akurasi data uji | **0,715** |
+| Macro-F1 CV (5-fold) | 0,648 ± 0,022 |
 | Macro-F1 di video yang belum pernah dilihat | 0,590 ± 0,042 |
-| Selisih skor latih-uji | 0,105 (good fit) |
+| Selisih skor latih-uji | 0,107 (good fit) |
 
 **Good fit dan robust?** Ya (ringkasan lengkap di Bab 9.9):
-- **Good fit:** selisih latih-uji kecil (0,105), `C = 0,58` berada di puncak kurva validasi, dan garis latih dan uji pada kurva belajar makin rapat.
-- **Robust:** stabil antar-fold (± 0,021), skor uji berada di tengah rentang bootstrap (0,603–0,676), tetap bekerja di video baru (0,590, terendah 0,536), dan keunggulannya signifikan menurut uji McNemar.
+- **Good fit:** selisih latih-uji kecil (0,107), `C = 0,58` berada di puncak kurva validasi, dan garis latih dan uji pada kurva belajar makin rapat.
+- **Robust:** stabil antar-fold (± 0,022), skor uji berada di tengah rentang bootstrap (0,601–0,676), tetap bekerja di video baru (0,590, terendah 0,536), dan keunggulannya signifikan menurut uji McNemar.
 - **Catatan:** skor turun ke 0,59 di video baru, dan batas skornya ada pada kualitas label (kappa 0,506), bukan pada modelnya.
 
 **Perbandingan dengan model lain:**
@@ -47,15 +47,15 @@ Semua sumber acak dikunci dengan **`random_state=42`**, jadi hasilnya selalu sam
 | Model | Macro-F1 CV | Macro-F1 uji | Lintas video | Selisih latih-uji |
 |---|---|---|---|---|
 | TF-IDF + SVM linear (baseline klasik) | 0,566 | 0,569 | 0,469 | 0,409 |
-| Naive Bayes, hitungan kata (baseline klasik) | 0,525 | 0,531 | 0,343 | 0,411 |
-| e5-large + Naive Bayes | *lihat notebook* | *lihat notebook* | *lihat notebook* | *lihat notebook* |
-| e5-large + LR | 0,641 | 0,642 | 0,585 | 0,087 |
-| e5-large + KNN (k=15) | 0,619 | 0,659 | 0,506 | 0,037 |
-| e5-large + TF-IDF + LR | 0,664 | 0,661 | 0,587 | 0,242 |
-| XLM-RoBERTa-large (*fine-tuning*) | - | 0,623 | - | - |
-| **e5-large + SVM linear** | 0,648 | 0,640 | **0,590** | 0,105 |
+| Naive Bayes, hitungan kata (baseline klasik) | 0,526 | 0,531 | 0,343 | 0,410 |
+| e5-large + Naive Bayes | 0,591 | 0,597 | 0,513 | 0,031 |
+| e5-large + LR | 0,642 | 0,633 | 0,588 | 0,096 |
+| e5-large + KNN (k=15) | 0,619 | 0,656 | 0,504 | 0,040 |
+| e5-large + TF-IDF + LR | 0,665 | 0,658 | 0,587 | 0,241 |
+| XLM-RoBERTa-large (*fine-tuning*, 2 run) | - | 0,623 dan 0,657 | - | - |
+| **e5-large + SVM linear** | 0,648 | 0,639 | **0,590** | 0,107 |
 
-SVM linear dipilih karena **paling seimbang untuk otomasi**: skornya di video baru paling tinggi, tidak overfitting, stabil, dan paling sederhana. Uji McNemar menunjukkan SVM **setara** dengan e5-large + TF-IDF + LR, dan **lebih baik secara signifikan** daripada kedua baseline klasik (TF-IDF + SVM dan Naive Bayes dengan hitungan kata), e5-large + LR, dan KNN pada video baru (p < 0,001). Kedua baseline klasik paling rendah dan paling overfitting, jadi embedding e5-large terbukti penting.
+SVM linear dipilih karena **paling seimbang untuk otomasi**: skornya di video baru paling tinggi, tidak overfitting, stabil, dan paling sederhana. Uji McNemar menunjukkan SVM **setara** dengan e5-large + TF-IDF + LR, dan **lebih baik secara signifikan** daripada kedua baseline klasik (TF-IDF + SVM dan Naive Bayes dengan hitungan kata), e5-large + LR, dan KNN pada video baru (p < 0,001). Kedua baseline klasik paling rendah dan paling overfitting, jadi embedding e5-large terbukti penting. SVM juga lebih baik daripada Naive Bayes dengan e5-large (p < 0,001). *Fine-tuning* XLM-RoBERTa-large tidak stabil antar-run (0,623 dan 0,657 di data uji, dengan kode dan *seed* yang sama): selisihnya dengan SVM masih di dalam rentang bootstrap SVM, jadi dinilai **setara**, tetapi jauh lebih berat.
 
 ---
 
@@ -73,7 +73,7 @@ Setiap grafik diberi penjelasan cara membacanya dan bagian **Hasil**.
 | 9.3 | kurva validasi `C`, kurva belajar | `C = 0,58` berada di puncak validasi (good fit) |
 | 9.4 | sebaran bootstrap, skor per video baru | skor uji bukan kebetulan; skor turun di video baru |
 | 9.5 | ilustrasi KNN (15 tetangga terdekat), skor vs good fit, *heatmap* skor per video | label bercampur sehingga KNN gagal di video baru |
-| Colab | hasil validasi XLM-R per epoch, confusion matrix | puncak di epoch 4, lalu mulai overfitting |
+| Colab | hasil validasi XLM-R per epoch, confusion matrix | macro-F1 naik sampai epoch 5, *validation loss* terendah di epoch 4; hasil berbeda antar-run |
 
 ---
 
@@ -92,7 +92,7 @@ Setiap grafik diberi penjelasan cara membacanya dan bagian **Hasil**.
 
 1. Buka notebook di **Google Colab** atau **Antigravity**, lalu jalankan sel dari atas ke bawah. Dataset diambil langsung dari GitHub, jadi tidak perlu upload file (butuh koneksi internet).
 2. Bagian yang paling lama: stemming (sekitar 2–3 menit), embedding e5-large (sekitar 2–3 menit di GPU, lebih lama di CPU; saat pertama kali, model sekitar 2 GB diunduh dulu), dan Bayesian Search (sekitar 5 menit).
-3. `finetune_transformer_colab.ipynb` sebaiknya dijalankan di Google Colab dengan **T4 GPU** (sekitar 20–30 menit).
+3. `finetune_transformer_colab.ipynb` sebaiknya dijalankan di Google Colab dengan **T4 GPU** (sekitar 30–40 menit).
 
 ---
 
@@ -100,4 +100,4 @@ Setiap grafik diberi penjelasan cara membacanya dan bagian **Hasil**.
 
 - Sebagian besar label dibuat oleh AI (Claude Opus 5.5), dengan kecocokan sedang terhadap manusia (kappa 0,506). Pada 90 komentar uji berlabel manusia, model mencapai macro-F1 0,612.
 - Data hanya dari 6 video. Pada video baru, skor turun ke sekitar 0,59.
-- Label positif paling sulit ditebak (F1 0,485), terutama pada komentar berbahasa Inggris.
+- Label positif paling sulit ditebak (F1 0,483), terutama pada komentar berbahasa Inggris.
