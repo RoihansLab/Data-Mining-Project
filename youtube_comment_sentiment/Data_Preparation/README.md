@@ -28,9 +28,12 @@ Memasang dan memanggil semua *library* yang dibutuhkan, misalnya `pandas` untuk 
 Di sini juga dipasang **`SEED = 42`**, semacam "kunci" supaya hasil yang acak selalu sama setiap kali notebook dijalankan ulang.
 
 ### Langkah 2 · Kenali datanya (Bab 2)
-Data mentah diambil dengan skrip [`datasets/scrape_youtube_comments.py`](../../datasets/scrape_youtube_comments.py) dari **6 video** (2 berbahasa Indonesia, 4 berbahasa Inggris), maksimal 1.500 komentar per video.
-Video dipilih secara **purposif**: bertema sama (AI menggantikan pekerjaan), mencakup dua bahasa, dan punya cukup banyak komentar. Jadi hasilnya adalah **studi kasus** pada 6 video ini.
-Setiap komentar punya 5 informasi: video asal, nama akun, isi komentar, jumlah *like*, dan waktu.
+Data mentah diambil pada **17 Oktober 2026** dengan skrip [`datasets/scrape_youtube_comments.py`](../../datasets/scrape_youtube_comments.py) dari **6 video** (2 berbahasa Indonesia, 4 berbahasa Inggris).
+- Video dipilih secara **purposif**: bertema sama (AI menggantikan pekerjaan), mencakup dua bahasa, dan punya cukup banyak komentar. Jadi hasilnya adalah **studi kasus** pada 6 video ini.
+- Pengambilan dibatasi **1.500 komentar per video**, diurutkan dari yang terpopuler. Tanpa batas ini, video CGP Grey (sekitar 48 ribu komentar) akan menguasai sekitar 95% data.
+- Setiap komentar punya 5 informasi: video asal, akun penulis, isi komentar, jumlah *like*, dan waktu.
+
+🔒 **Privasi:** pada file `youtube_comments.csv` di GitHub, nama akun asli sudah **diganti kode** (`akun_0001`, `akun_0002`, dan seterusnya). Akun yang sama selalu mendapat kode yang sama, jadi semua langkah pembersihan tetap menghasilkan angka yang sama persis.
 
 ### Langkah 3 · Bersihkan datanya (Bab 3)
 Ibarat mencuci sayur sebelum dimasak. Setiap masalah dicek dulu jumlahnya, baru dibersihkan:
@@ -49,13 +52,13 @@ Ibarat mencuci sayur sebelum dimasak. Setiap masalah dicek dulu jumlahnya, baru 
 | Bahasa tidak jelas | 121 | dihapus |
 | *Likes* berupa teks (`4,4K`) | 42 | diubah jadi angka (4.400) |
 
-Nama akun juga **diganti nomor** supaya identitas penulis terlindungi.
+Kode akun juga **diganti nomor urut** (`author_id`), lalu kolom akunnya dibuang, supaya data yang disimpan tidak memuat identitas penulis.
 Hasilnya: dari **4.458** tersisa **3.935 komentar bersih** (11,7% dibuang).
 
 ### Langkah 4 · Lihat polanya (Bab 4 · EDA)
 Sebelum memberi label, kita intip dulu isi datanya lewat grafik:
-- jumlah komentar per video dan per bahasa (Inggris 2.494, Indonesia 1.441),
-- panjang komentar, pemakaian emoji dan tanda tanya/seru,
+- jumlah komentar per video dan per bahasa (Inggris 2.494, Indonesia 1.441), dan bahasa komentar hampir selalu mengikuti bahasa videonya,
+- pemakaian emoji (10%) dan tanda tanya/seru (21%), yang dipertahankan karena membawa nada komentar,
 - sebaran *likes*: **52% komentar tidak mendapat like sama sekali**, dan hanya 41 komentar yang tembus lebih dari 1.000 like.
 
 ### Langkah 5 · Beri label (Bab 5)
@@ -87,9 +90,9 @@ Untuk 449 komentar berlabel manual, **label manusia yang dipakai**. Asal setiap 
 
 | Dibandingkan dengan 99 label manusia | Macro-F1 | Akurasi | Kappa |
 |---|---|---|---|
-| Label Claude Opus 5.5 | 0,676 | 0,707 | 0,506 (kesepakatan sedang) |
+| Label Claude Opus 5.5 (v8) | 0,676 | 0,707 | 0,506 (kesepakatan sedang) |
 
-Angka ini dihitung ulang dengan kode di Bab 5.3. Panduan diperbaiki beberapa kali: kecocokan dengan manusia naik dari kappa sekitar 0,39 (versi awal, 4 label) menjadi sekitar 0,51 (v7–v8, 3 label). Versi akhir (v8) dipilih karena paling cocok dengan label manusia, bukan berdasarkan skor model.
+Angka ini dihitung ulang dengan kode di Bab 5.3. Panduan diperbaiki beberapa kali: kecocokan dengan manusia naik dari kappa sekitar 0,39 (v1–v3, 4 label) menjadi sekitar 0,51 (v7–v8, 3 label). Versi akhir (v8) dipilih karena paling cocok dengan label manusia, bukan berdasarkan skor model. Karena v8 dipilih dan diuji pada 99 komentar yang sama, kappa 0,506 kemungkinan sedikit lebih tinggi daripada kecocokan pada komentar baru.
 
 ---
 
@@ -107,10 +110,9 @@ Kalau hanya menghitung komentar yang punya sikap jelas (1.593 komentar):
 
 Artinya, warganet yang bersikap terhadap isu ini **lebih banyak yang khawatir** dibanding yang optimis terhadap AI yang menggantikan pekerjaan.
 
-**Pola tersembunyi (Bab 5.5):**
-- 🎬 **Judul video memengaruhi sikap.** Video berjudul menakutkan ("KIAMAT KERJA", "unemployment soars") punya komentar negatif terbanyak (35–37%), sedangkan video CGP Grey hampir seluruhnya candaan atau *off-topic* (84,5% perlu ditinjau).
-- 📏 **Makin panjang komentar, makin jelas sikapnya.** Komentar 1–5 kata 87% "perlu ditinjau", sedangkan komentar lebih dari 50 kata 64% punya sikap jelas.
-- 👍 **Penonton lebih suka candaan.** Dari 50 komentar dengan *likes* terbanyak, 38 berlabel "perlu ditinjau", hanya 8 negatif dan 4 positif.
+**Pola sikap (Bab 5.5):**
+- 🎬 **Sikap berbeda antarvideo.** Komentar pada video berjudul menakutkan ("KIAMAT KERJA", "unemployment soars", "took my job") paling banyak yang negatif (32–37%), sedangkan video CGP Grey hampir seluruhnya candaan atau *off-topic* (84,5% perlu ditinjau). Data ini hanya menunjukkan perbedaan antarvideo, belum membuktikan bahwa judul video yang menjadi penyebabnya.
+- 🗣️ **Komentar berbahasa Indonesia lebih sering bersikap jelas** (negatif 29,6%, positif 21,0%) daripada komentar berbahasa Inggris (negatif 20,5%, positif 14,2%).
 
 ---
 
@@ -131,7 +133,8 @@ Bayangkan memetik **durian matang** di kebun. Di kebun ada 10 yang matang, kamu 
 | Berkas | Isi |
 |---|---|
 | `data_preparation_labeling.ipynb` | notebook persiapan data dan pelabelan (Bab 1–5) |
-| `../../datasets/youtube_comments.csv` | data mentah hasil *scraping* (4.458 komentar) |
+| `../../datasets/scrape_youtube_comments.py` | skrip *scraping* komentar YouTube |
+| `../../datasets/youtube_comments.csv` | data mentah hasil *scraping* (4.458 komentar), dengan nama akun sudah diganti kode |
 | `../../datasets/youtube_comments_clean_EDA.csv` | data bersih (dibuat oleh notebook, tidak ikut di GitHub) |
 | `../../datasets/youtube_comments_label_final.csv` | **hasil akhir**: data bersih + label final, dengan kolom `sumber_label` (`manual` atau `claude`) |
 | `../../datasets/label_manual_299.csv` | 299 label manual (pelabel 1 dan pelabel 2), dipakai untuk uji kualitas label (Bab 5.3) |
@@ -150,13 +153,15 @@ Bayangkan memetik **durian matang** di kebun. Di kebun ada 10 yang matang, kamu 
 ## ⚠️ Keterbatasan (Jujur Saja)
 
 - Sebagian besar label (sekitar 89%) dibuat oleh AI, dengan kecocokan **sedang** terhadap manusia (kappa 0,506). Persentase di atas adalah **perkiraan**, bukan angka pasti.
-- Label manual dibuat sebelum panduan final dipertegas, dan setiap komentar manual hanya dilabeli satu orang, jadi kesepakatan antar-manusia belum diukur.
+- Versi panduan akhir (v8) dipilih dan diuji pada 99 label manusia yang sama, sehingga kappa 0,506 kemungkinan sedikit lebih tinggi daripada kecocokan pada data baru.
+- Label manual dibuat sebelum panduan final dipertegas, dan setiap komentar manual hanya dilabeli satu orang, jadi kesepakatan antarmanusia belum diukur.
 - Komentar yang sangat panjang hanya dibaca sekitar 400–450 karakter pertamanya oleh Claude, dan pelabelan lewat chat tidak bisa diulang persis.
 - Komentar diambil dengan urutan "paling populer", sehingga komentar yang banyak di-*like* lebih terwakili.
 - Data hanya dari 6 video yang dipilih secara purposif (studi kasus), jadi hasilnya belum tentu mewakili seluruh pengguna internet.
 - Pada pohon keputusan, negatif dicek lebih dulu daripada positif, sehingga komentar yang condong ke dua arah cenderung berlabel negatif. Porsi negatif (58,9%) mungkin sedikit lebih tinggi dari kenyataannya.
+- Sebaliknya, banyak komentar "perlu ditinjau" yang populer berupa sindiran yang diam-diam menyiratkan kekhawatiran. Jika sindiran seperti ini dihitung negatif, porsi kekhawatiran publik bisa lebih besar.
 - Panduan belum punya aturan khusus untuk komentar campuran (khawatir sekaligus optimis) dan keluhan soal pekerjaan yang tidak menyebut AI.
 
 ---
 
-➡️ **Tahap berikutnya:** data berlabel ini dipakai di notebook [`classification_modeling.ipynb`](../Classification/classification_modeling.ipynb), mulai **Bab 6 (Text Preprocessing)** sampai **Bab 10 (Kesimpulan)**, untuk melatih dan menguji model klasifikasi (model akhir: **e5-large + SVM linear**).
+➡️ **Tahap berikutnya:** data berlabel ini dipakai di notebook [`classification_modeling.ipynb`](../Classification/classification_modeling.ipynb), mulai **Bab 6 (Text Preprocessing)** sampai **Bab 14 (Kesimpulan)**. Di sana, 9 kombinasi fitur dan algoritma dibandingkan, dan model akhirnya adalah **SVM linear + e5-large** (macro-F1 data uji 0,640, akurasi 0,716).
