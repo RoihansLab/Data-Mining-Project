@@ -20,3 +20,5 @@ Setiap kelompok mengerjakan **satu proyek penelitian** dari data yang dikumpulka
 
 1. Muhammad Rafa Enrico (4.33.24.2.15)
 2. Roihan Saputra (4.33.24.2.20)
+
+**Dosen pembimbing:** Dr. Sukamto, S.Kom., M.T.
