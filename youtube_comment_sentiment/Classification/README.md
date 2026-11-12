@@ -1,6 +1,6 @@
 # 🤖 Klasifikasi Sikap Publik terhadap AI yang Menggantikan Pekerjaan
 
-> Folder ini berisi notebook untuk **melatih dan menguji model** yang menebak sikap sebuah komentar YouTube: **positif**, **negatif**, atau **perlu ditinjau**.
+> Folder ini berisi notebook untuk **membandingkan, melatih, dan menguji model** yang menebak sikap sebuah komentar YouTube: **positif**, **negatif**, atau **perlu ditinjau**.
 
 📓 Notebook utama: [`classification_modeling.ipynb`](classification_modeling.ipynb)
 📦 Data yang dipakai: [`datasets/youtube_comments_label_final.csv`](../../datasets/youtube_comments_label_final.csv) (3.935 komentar berlabel, hasil notebook [Data Preparation](../Data_Preparation/))
@@ -10,70 +10,90 @@
 ## 🗺️ Alur Notebook
 
 ```
-📄 Data berlabel → 🧹 Text preprocessing → 🔢 Embedding e5-large → 🤖 SVM linear → 🎯 Bayesian Search → 📊 Evaluasi
+📄 Data berlabel → 🧹 Text preprocessing → ✂️ Pembagian data → 🔢 e5-large & TF-IDF
+→ 🤖 9 model (5-fold CV) → 🎯 Bayesian Search → ⚖️ Perbandingan → 📊 Evaluasi di data uji
 ```
 
 | Bab | Tahap | Isi |
 |---|---|---|
-| 6 | Text Preprocessing | case folding, removing, stopword (kata negasi tetap disimpan), tokenizing, stemming (Sastrawi & Porter) |
-| 7 | Ekstraksi Fitur | embedding **e5-large** (1.024 angka per komentar), lalu pembagian data 80:20 (stratified) |
-| 8 | Klasifikasi | **SVM linear** dengan pengaturan awal |
-| 9 | Optimasi & Evaluasi | Bayesian Search (Optuna), metrik, cek overfitting/underfitting, robustness, perbandingan model, uji McNemar, analisis per bahasa dan kesalahan, simpan model, ringkasan good fit & robust |
-| 10 | Kesimpulan | hasil akhir, keterbatasan, dan rekomendasi |
+| 1 | Import Library | library dikelompokkan per bab, semua sumber acak dikunci dengan angka 42 |
+| 6 | Text Preprocessing | case folding, removing, stopword (kata negasi tetap disimpan), tokenizing, stemming (Sastrawi & Porter), khusus untuk TF-IDF |
+| 7 | Pembagian Data | 80% data latih (3.141) dan 20% data uji (786), *stratified* |
+| 8 | Ekstraksi Fitur | embedding **e5-large** (1.024 angka per komentar) dan **TF-IDF** (belajar dari data latih saja) |
+| 9 | Klasifikasi | SVM linear, Naive Bayes, Logistic Regression, dan KNN, masing-masing dengan e5 dan TF-IDF, dinilai dengan 5-fold CV |
+| 10 | Optimasi | Bayesian Search (Optuna, 50 percobaan) untuk kedelapan model |
+| 11 | Deep Learning | *fine-tuning* **XLM-RoBERTa-large** dengan 5-fold CV yang sama |
+| 12 | Perbandingan Model | performa, good fit, robustness (uji lintas video), visualisasi, uji McNemar, dan model terpilih |
+| 13 | Evaluasi di Data Uji | laporan model akhir, confusion matrix, rentang bootstrap, skor per bahasa, skor pada label manusia, contoh kesalahan, dan menyimpan model |
+| 14 | Kesimpulan | jawaban rumusan masalah, makna untuk otomatisasi, keterbatasan, dan saran |
 
-Semua sumber acak dikunci dengan **`random_state=42`**, jadi hasilnya selalu sama setiap kali dijalankan.
+Data uji **hanya dipakai sekali** di Bab 13. Pemilihan model di Bab 9–12 hanya memakai data latih (CV dan uji lintas video), supaya skor akhirnya jujur.
+
+---
+
+## ⚖️ Cara Memilih Model
+
+Model dipilih berdasarkan tiga kriteria dari rumusan masalah:
+
+| Kriteria | Ukuran | Artinya |
+|---|---|---|
+| **Performa** | macro-F1 5-fold CV | seberapa bagus model menebak komentar yang belum pernah dilihat |
+| **Good fit** | selisih macro-F1 latih dan CV | makin kecil, makin sedikit model menghafal data latih |
+| **Robustness** | macro-F1 lintas video | model dilatih dengan 5 video lalu diuji di 1 video yang belum pernah dilihat, bergiliran untuk keenam video |
+
+**Hasil perbandingan (setelah Bayesian Search):**
+
+| Model | Macro-F1 CV | Selisih latih–CV | Lintas video |
+|---|---|---|---|
+| **SVM linear + e5** | **0,648** | **0,102** | **0,586** |
+| Logistic Regression + e5 | 0,645 | 0,120 | 0,583 |
+| XLM-RoBERTa-large | 0,632 | 0,127 | 0,558 |
+| KNN + e5 | 0,629 | 0,371 | 0,496 |
+| Naive Bayes + e5 | 0,592 | 0,042 | 0,514 |
+| Logistic Regression + TF-IDF | 0,571 | 0,322 | 0,440 |
+| Naive Bayes + TF-IDF | 0,548 | 0,440 | 0,376 |
+| SVM linear + TF-IDF | 0,543 | 0,449 | 0,411 |
+| KNN + TF-IDF | 0,483 | 0,517 | 0,338 |
+
+- **e5-large lebih baik daripada TF-IDF untuk semua algoritma.** Model TF-IDF lebih banyak menghafal dan lemah di video baru.
+- **SVM + e5 unggul di ketiga kriteria sekaligus.**
+- **Uji McNemar:** SVM + e5 lebih sering benar secara signifikan daripada semua model lain, termasuk Logistic Regression + e5 (166 vs 94 komentar, p < 0,001). Dengan koreksi Bonferroni, hanya keunggulan atas KNN + e5 yang tidak lagi signifikan (p = 0,024).
 
 ---
 
 ## 🎯 Hasil Model Akhir
 
-**Model akhir: e5-large + SVM linear** (`C = 0,58`, `class_weight="balanced"`, dipilih dengan Bayesian Search)
+**Model akhir: SVM linear + e5-large** (`C = 0,584`, `class_weight="balanced"`)
 
-| Metrik | Nilai |
+| Metrik di data uji (786 komentar) | Nilai |
 |---|---|
-| Macro-F1 data uji | **0,639** |
-| Akurasi data uji | **0,715** |
-| Macro-F1 CV (5-fold) | 0,648 ± 0,022 |
-| Macro-F1 di video yang belum pernah dilihat | 0,590 ± 0,042 |
-| Selisih skor latih-uji | 0,107 (good fit) |
+| Macro-F1 | **0,640** |
+| Akurasi | **0,716** |
+| Rentang bootstrap 95% (macro-F1) | 0,603–0,676 |
+| F1 negatif / perlu ditinjau / positif | 0,608 / 0,828 / 0,485 |
 
-**Good fit dan robust?** Ya (ringkasan lengkap di Bab 9.9):
-- **Good fit:** selisih latih-uji kecil (0,107), `C = 0,58` berada di puncak kurva validasi, dan garis latih dan uji pada kurva belajar makin rapat.
-- **Robust:** stabil antar-fold (± 0,022), skor uji berada di tengah rentang bootstrap (0,601–0,676), tetap bekerja di video baru (0,590, terendah 0,536), dan keunggulannya signifikan menurut uji McNemar.
-- **Catatan:** skor turun ke 0,59 di video baru, dan batas skornya ada pada kualitas label (kappa 0,506), bukan pada modelnya.
+| Analisis tambahan | Macro-F1 |
+|---|---|
+| Komentar berbahasa Indonesia (276) | 0,659 |
+| Komentar berbahasa Inggris (510) | 0,618 |
+| Komentar berlabel manusia (90) | 0,612 |
+| Komentar berlabel Claude (696) | 0,644 |
 
-**Perbandingan dengan model lain:**
-
-| Model | Macro-F1 CV | Macro-F1 uji | Lintas video | Selisih latih-uji |
-|---|---|---|---|---|
-| TF-IDF + SVM linear (baseline klasik) | 0,566 | 0,569 | 0,469 | 0,409 |
-| Naive Bayes, hitungan kata (baseline klasik) | 0,526 | 0,531 | 0,343 | 0,410 |
-| e5-large + Naive Bayes | 0,591 | 0,597 | 0,513 | 0,031 |
-| e5-large + LR | 0,642 | 0,633 | 0,588 | 0,096 |
-| e5-large + KNN (k=15) | 0,619 | 0,656 | 0,504 | 0,040 |
-| e5-large + TF-IDF + LR | 0,665 | 0,658 | 0,587 | 0,241 |
-| XLM-RoBERTa-large (*fine-tuning*, 2 run) | - | 0,623 dan 0,657 | - | - |
-| **e5-large + SVM linear** | 0,648 | 0,639 | **0,590** | 0,107 |
-
-SVM linear dipilih karena **paling seimbang untuk otomasi**: skornya di video baru paling tinggi, tidak overfitting, stabil, dan paling sederhana. Uji McNemar menunjukkan SVM **setara** dengan e5-large + TF-IDF + LR, dan **lebih baik secara signifikan** daripada kedua baseline klasik (TF-IDF + SVM dan Naive Bayes dengan hitungan kata), e5-large + LR, dan KNN pada video baru (p < 0,001). Kedua baseline klasik paling rendah dan paling overfitting, jadi embedding e5-large terbukti penting. SVM juga lebih baik daripada Naive Bayes dengan e5-large (p < 0,001). *Fine-tuning* XLM-RoBERTa-large tidak stabil antar-run (0,623 dan 0,657 di data uji, dengan kode dan *seed* yang sama): selisihnya dengan SVM masih di dalam rentang bootstrap SVM, jadi dinilai **setara**, tetapi jauh lebih berat.
+- Skor data uji (0,640) **hampir sama dengan skor CV** (0,648), jadi pemilihan model bisa dipercaya.
+- Untuk komentar dari **video baru**, gambaran realistisnya sekitar **0,59** (uji lintas video).
+- Kesalahan terbanyak terjadi pada **sindiran dan sikap yang tersirat**, terutama di batas antara "perlu ditinjau" dan sikap yang jelas.
 
 ---
 
 ## 📊 Visualisasi di Notebook
 
-Setiap grafik diberi penjelasan cara membacanya dan bagian **Hasil**.
-
 | Bab | Grafik | Yang terlihat |
 |---|---|---|
-| 6.1 | diagram lingkaran sebaran label, 10 komentar dengan *likes* terbanyak per label | perlu ditinjau 59,5%; komentar terpopuler kebanyakan sindiran yang layak ditinjau ulang |
-| 9.2 | bukti hitung precision, recall, F1, macro-F1 dari confusion matrix + grafik garisnya | rumus terbukti sama dengan scikit-learn; precision dan recall seimbang |
-| 9.2 | confusion matrix (jumlah dan persen), garis kenyataan vs tebakan | positif paling sulit (hanya 49% ditebak benar) |
-| 9.2 | kurva logistik dari skor SVM | skor SVM membentuk kurva S, tetapi banyak komentar tumpang-tindih di dekat garis batas |
-| 9.2 | ilustrasi SVM: daerah 3 label dan *support vector* | perlu ditinjau berada di daerah "skor negatif dan positif sama-sama rendah" |
-| 9.3 | kurva validasi `C`, kurva belajar | `C = 0,58` berada di puncak validasi (good fit) |
-| 9.4 | sebaran bootstrap, skor per video baru | skor uji bukan kebetulan; skor turun di video baru |
-| 9.5 | ilustrasi KNN (15 tetangga terdekat), skor vs good fit, *heatmap* skor per video | label bercampur sehingga KNN gagal di video baru |
-| Colab | hasil validasi XLM-R per epoch, confusion matrix | macro-F1 naik sampai epoch 5, *validation loss* terendah di epoch 4; hasil berbeda antar-run |
+| 6.1 | diagram lingkaran sebaran label, 10 komentar dengan *likes* terbanyak per label | perlu ditinjau 59,5%; komentar terpopuler kebanyakan sindiran |
+| 12.3 | performa dan robustness setiap model (batang) | semua model e5 di atas model TF-IDF; SVM + e5 tertinggi |
+| 12.3 | good fit setiap model (batang) | model TF-IDF dan KNN paling banyak menghafal |
+| 13.1 | confusion matrix model akhir | label positif paling sulit; kesalahan terbanyak di sekitar "perlu ditinjau" |
+| 13.2 | sebaran macro-F1 dari 1.000 kali bootstrap | skor uji berada di tengah sebaran, bukan kebetulan |
 
 ---
 
@@ -81,23 +101,29 @@ Setiap grafik diberi penjelasan cara membacanya dan bagian **Hasil**.
 
 | Berkas | Isi |
 |---|---|
-| `classification_modeling.ipynb` | notebook utama: Bab 6–10 |
-| `finetune_transformer_colab.ipynb` | percobaan pembanding: *fine-tuning* XLM-RoBERTa-large. Dipisah karena dilatih dan diuji di **Google Colab** untuk meminjam GPU yang lebih kuat (T4, 16 GB), sedangkan GPU laptop hanya 6 GB |
-| `model_svm_e5_large.pkl` | model SVM akhir, **dibuat oleh notebook** (Bab 9.8) |
-| `hasil_perbandingan_model.csv` | tabel perbandingan model, **dibuat oleh notebook** (Bab 9.8) |
+| `classification_modeling.ipynb` | notebook utama: Bab 1 dan 6–14 |
+| `model_svm_e5_large.pkl` | model SVM akhir, **dibuat oleh notebook** (Bab 13.6) |
+
+Tebakan XLM-RoBERTa untuk setiap fold dan setiap video disimpan di Google Drive (`MyDrive/hasil_xlm_cv`), sehingga notebook bisa dijalankan ulang tanpa melatih XLM-RoBERTa dari awal.
 
 ---
 
 ## ▶️ Cara Menjalankan
 
-1. Buka notebook di **Google Colab** atau **Antigravity**, lalu jalankan sel dari atas ke bawah. Dataset diambil langsung dari GitHub, jadi tidak perlu upload file (butuh koneksi internet).
-2. Bagian yang paling lama: stemming (sekitar 2–3 menit), embedding e5-large (sekitar 2–3 menit di GPU, lebih lama di CPU; saat pertama kali, model sekitar 2 GB diunduh dulu), dan Bayesian Search (sekitar 5 menit).
-3. `finetune_transformer_colab.ipynb` sebaiknya dijalankan di Google Colab dengan **T4 GPU** (sekitar 30–40 menit).
+1. Buka notebook di **Google Colab** dengan runtime **GPU**, lalu pilih *Runtime → Run all*. Dataset diambil langsung dari GitHub, jadi tidak perlu upload file (butuh koneksi internet).
+2. Saat diminta, izinkan akses **Google Drive**. Drive dipakai untuk menyimpan hasil XLM-RoBERTa.
+3. Bagian yang paling lama:
+   - stemming: sekitar 2–3 menit
+   - embedding e5-large: sekitar 1–2 menit (saat pertama kali, model sekitar 2 GB diunduh dulu)
+   - Bayesian Search: sekitar 10–30 menit
+   - XLM-RoBERTa: sekitar 5 menit per pelatihan, atau sekitar 1 jam untuk 5-fold CV dan uji lintas video jika belum ada hasil tersimpan di Drive
 
 ---
 
 ## ⚠️ Keterbatasan
 
-- Sebagian besar label dibuat oleh AI (Claude Opus 5.5), dengan kecocokan sedang terhadap manusia (kappa 0,506). Pada 90 komentar uji berlabel manusia, model mencapai macro-F1 0,612.
-- Data hanya dari 6 video. Pada video baru, skor turun ke sekitar 0,59.
-- Label positif paling sulit ditebak (F1 0,483), terutama pada komentar berbahasa Inggris.
+- Sekitar 89% label dibuat oleh AI (Claude Opus 5.5), dengan kecocokan sedang terhadap manusia (kappa 0,506). Pada 90 komentar uji berlabel manusia, model mencapai macro-F1 0,612.
+- Setiap komentar berlabel manual hanya dilabeli satu orang, sehingga kesepakatan antarpelabel manusia belum diukur.
+- Data hanya dari 6 video, dengan dua video berbahasa Indonesia.
+- XLM-RoBERTa tidak dioptimasi dengan Bayesian Search karena keterbatasan komputasi.
+- Uji McNemar dihitung dari tebakan cross-validation, sehingga sedikit kurang ketat daripada uji pada satu data uji yang sama.
