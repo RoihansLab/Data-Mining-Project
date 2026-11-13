@@ -7,6 +7,15 @@
 
 ---
 
+## 💡 Ringkasan Singkat
+
+- **Pertanyaan:** model mana yang paling bisa diandalkan untuk menebak sikap komentar YouTube secara otomatis?
+- **Yang dibandingkan:** 9 model, yaitu 4 algoritma (SVM, Naive Bayes, Logistic Regression, KNN) × 2 cara mengubah teks jadi angka (e5-large dan TF-IDF), ditambah 1 model *deep learning* (XLM-RoBERTa).
+- **Jawaban:** **SVM linear + e5-large**. Model ini unggul dalam performa, paling sedikit menghafal, dan paling stabil di video baru.
+- **Nilai akhir di data uji:** macro-F1 **0,640** dan akurasi **0,716**.
+
+---
+
 ## 🗺️ Alur Notebook
 
 ```
@@ -17,21 +26,52 @@
 | Bab | Tahap | Isi |
 |---|---|---|
 | 1 | Import Library | library dikelompokkan per bab, semua sumber acak dikunci dengan angka 42 |
-| 6 | Text Preprocessing | case folding, removing, stopword (kata negasi tetap disimpan), tokenizing, stemming (Sastrawi & Porter), khusus untuk TF-IDF |
+| 6 | Text Preprocessing | case folding, removing, stopword (kata negasi tetap disimpan), tokenizing, dan stemming (Sastrawi & Porter), khusus untuk TF-IDF |
 | 7 | Pembagian Data | 80% data latih (3.141) dan 20% data uji (786), *stratified* |
-| 8 | Ekstraksi Fitur | embedding **e5-large** (1.024 angka per komentar) dan **TF-IDF** (belajar dari data latih saja) |
-| 9 | Klasifikasi | SVM linear, Naive Bayes, Logistic Regression, dan KNN, masing-masing dengan e5 dan TF-IDF, dinilai dengan 5-fold CV |
-| 10 | Optimasi | Bayesian Search (Optuna, 50 percobaan) untuk kedelapan model |
+| 8 | Ekstraksi Fitur | embedding **e5-large** (1.024 angka per komentar) dan **TF-IDF** (bobot kata) |
+| 9 | Klasifikasi | 4 algoritma × 2 fitur dengan pengaturan standar, dinilai dengan 5-fold CV. Model TF-IDF memakai *pipeline*, dan Naive Bayes serta KNN diseimbangkan dengan SMOTE |
+| 10 | Optimasi | Bayesian Search (Optuna, 50 percobaan per model) untuk kedelapan model |
 | 11 | Deep Learning | *fine-tuning* **XLM-RoBERTa-large** dengan 5-fold CV yang sama |
-| 12 | Perbandingan Model | performa, good fit, robustness (uji lintas video), visualisasi, uji McNemar, dan model terpilih |
+| 12 | Perbandingan Model | performa, good fit, robustness (uji lintas video), grafik, uji McNemar, dan model terpilih |
 | 13 | Evaluasi di Data Uji | laporan model akhir, confusion matrix, rentang bootstrap, skor per bahasa, skor pada label manusia, contoh kesalahan, dan menyimpan model |
 | 14 | Kesimpulan | jawaban rumusan masalah, makna untuk otomatisasi, keterbatasan, dan saran |
 
-Data uji **hanya dipakai sekali** di Bab 13. Pemilihan model di Bab 9–12 hanya memakai data latih (CV dan uji lintas video), supaya skor akhirnya jujur.
+---
+
+## 📚 Istilah Penting (Versi Sederhana)
+
+| Istilah | Artinya |
+|---|---|
+| **e5-large** | model yang sudah dilatih dari jutaan kalimat, untuk mengubah komentar menjadi 1.024 angka sesuai **maknanya**. Komentar yang maknanya mirip punya angka yang mirip |
+| **TF-IDF** | cara mengubah komentar menjadi angka berdasarkan **kata-katanya**. Kata yang jarang muncul diberi nilai lebih tinggi |
+| **Data latih / data uji** | data latih untuk belajar; data uji disimpan sampai akhir untuk menilai model secara jujur |
+| **5-fold cross-validation (CV)** | data latih dibagi 5 bagian. Model belajar dari 4 bagian lalu menebak 1 bagian sisanya, bergiliran 5 kali. Seperti 5 kali *try out* sebelum ujian akhir |
+| **Macro-F1** | ukuran utama: rata-rata F1 dari ketiga label, setiap label dianggap sama penting |
+| **Class weight** | label yang jumlahnya sedikit diberi bobot kesalahan lebih besar saat model belajar |
+| **SMOTE** | membuat data sintetis untuk label yang jumlahnya sedikit, sampai jumlah ketiga label sama |
+| **Pipeline** | rangkaian langkah (misalnya TF-IDF → SMOTE → model) yang selalu dijalankan bersama, supaya TF-IDF dan SMOTE hanya belajar dari data latih di setiap fold |
+| **Bayesian Search** | cara mencari pengaturan terbaik model. Setiap percobaan berikutnya dipilih berdasarkan hasil percobaan sebelumnya |
+| **Uji McNemar** | uji statistik untuk mengecek apakah perbedaan dua model nyata atau hanya kebetulan |
 
 ---
 
-## ⚖️ Cara Memilih Model
+## ⚖️ Supaya Perbandingannya Adil
+
+1. **Data uji hanya dipakai sekali**, di Bab 13, untuk model yang sudah terpilih. Pemilihan model di Bab 9–12 hanya memakai data latih.
+2. **Semua model memakai 5 fold CV yang sama persis**, termasuk XLM-RoBERTa.
+3. **Semua model diseimbangkan**, karena labelnya tidak seimbang (perlu ditinjau 59,5%, negatif 23,8%, positif 16,6%):
+
+| Model | Cara menyeimbangkan |
+|---|---|
+| SVM linear, Logistic Regression | `class_weight="balanced"` |
+| Naive Bayes, KNN | SMOTE (karena tidak punya `class_weight`) |
+| XLM-RoBERTa | bobot label `balanced` di *loss* |
+
+4. **Tidak ada kebocoran data (*data leakage*).** TF-IDF dan SMOTE dimasukkan ke dalam *pipeline*, sehingga keduanya hanya belajar dari data latih di setiap fold.
+
+---
+
+## 🏆 Cara Memilih Model
 
 Model dipilih berdasarkan tiga kriteria dari rumusan masalah:
 
@@ -43,21 +83,24 @@ Model dipilih berdasarkan tiga kriteria dari rumusan masalah:
 
 **Hasil perbandingan (setelah Bayesian Search):**
 
-| Model | Macro-F1 CV | Selisih latih–CV | Lintas video |
-|---|---|---|---|
-| **SVM linear + e5** | **0,648** | **0,102** | **0,586** |
-| Logistic Regression + e5 | 0,645 | 0,120 | 0,583 |
-| XLM-RoBERTa-large | 0,632 | 0,127 | 0,558 |
-| KNN + e5 | 0,629 | 0,371 | 0,496 |
-| Naive Bayes + e5 | 0,592 | 0,042 | 0,514 |
-| Logistic Regression + TF-IDF | 0,571 | 0,322 | 0,440 |
-| Naive Bayes + TF-IDF | 0,548 | 0,440 | 0,376 |
-| SVM linear + TF-IDF | 0,543 | 0,449 | 0,411 |
-| KNN + TF-IDF | 0,483 | 0,517 | 0,338 |
+| Model | Penyeimbangan | Macro-F1 CV | Selisih latih–CV | Lintas video |
+|---|---|---|---|---|
+| **SVM linear + e5** | class weight | **0,648** | **0,102** | **0,586** |
+| Logistic Regression + e5 | class weight | 0,645 | 0,120 | 0,583 |
+| XLM-RoBERTa-large | bobot di *loss* | 0,632 | 0,127 | 0,558 |
+| Naive Bayes + e5 | SMOTE | 0,592 | 0,039 | 0,510 |
+| Logistic Regression + TF-IDF | class weight | 0,579 | 0,380 | 0,472 |
+| SVM linear + TF-IDF | class weight | 0,570 | 0,422 | 0,452 |
+| Naive Bayes + TF-IDF | SMOTE | 0,524 | 0,444 | 0,338 |
+| KNN + TF-IDF | SMOTE | 0,476 | 0,522 | 0,361 |
+| KNN + e5 | SMOTE | 0,470 | 0,530 | 0,353 |
 
-- **e5-large lebih baik daripada TF-IDF untuk semua algoritma.** Model TF-IDF lebih banyak menghafal dan lemah di video baru.
+**Yang bisa dibaca dari tabel:**
 - **SVM + e5 unggul di ketiga kriteria sekaligus.**
-- **Uji McNemar:** SVM + e5 lebih sering benar secara signifikan daripada semua model lain, termasuk Logistic Regression + e5 (166 vs 94 komentar, p < 0,001). Dengan koreksi Bonferroni, hanya keunggulan atas KNN + e5 yang tidak lagi signifikan (p = 0,024).
+- **e5-large lebih baik daripada TF-IDF** pada SVM, Logistic Regression, dan Naive Bayes. Model TF-IDF lebih banyak menghafal dan lemah di video baru.
+- **Model yang lebih rumit tidak selalu lebih baik.** XLM-RoBERTa butuh GPU dan waktu latih jauh lebih lama, tetapi tidak melampaui SVM + e5.
+- **SMOTE tidak membantu.** Naive Bayes dan KNN dengan SMOTE tetap paling rendah, karena data sintetis di ruang berdimensi tinggi tidak mirip komentar asli.
+- **Uji McNemar:** SVM + e5 lebih sering benar secara signifikan daripada semua model lain (p < 0,001), termasuk Logistic Regression + e5 (166 vs 94 komentar), dan tetap signifikan setelah koreksi Bonferroni.
 
 ---
 
@@ -79,8 +122,10 @@ Model dipilih berdasarkan tiga kriteria dari rumusan masalah:
 | Komentar berlabel manusia (90) | 0,612 |
 | Komentar berlabel Claude (696) | 0,644 |
 
-- Skor data uji (0,640) **hampir sama dengan skor CV** (0,648), jadi pemilihan model bisa dipercaya.
+**Artinya:**
+- Skor data uji (0,640) **hampir sama dengan skor CV** (0,648), jadi pemilihan model bisa dipercaya dan bukan kebetulan.
 - Untuk komentar dari **video baru**, gambaran realistisnya sekitar **0,59** (uji lintas video).
+- **Label "perlu ditinjau" paling mudah dikenali** (F1 0,828), sedangkan **positif paling sulit** (F1 0,485).
 - Kesalahan terbanyak terjadi pada **sindiran dan sikap yang tersirat**, terutama di batas antara "perlu ditinjau" dan sikap yang jelas.
 
 ---
@@ -90,7 +135,7 @@ Model dipilih berdasarkan tiga kriteria dari rumusan masalah:
 | Bab | Grafik | Yang terlihat |
 |---|---|---|
 | 6.1 | diagram lingkaran sebaran label, 10 komentar dengan *likes* terbanyak per label | perlu ditinjau 59,5%; komentar terpopuler kebanyakan sindiran |
-| 12.3 | performa dan robustness setiap model (batang) | semua model e5 di atas model TF-IDF; SVM + e5 tertinggi |
+| 12.3 | performa dan robustness setiap model (batang) | SVM + e5 tertinggi; model TF-IDF dan KNN paling rendah di video baru |
 | 12.3 | good fit setiap model (batang) | model TF-IDF dan KNN paling banyak menghafal |
 | 13.1 | confusion matrix model akhir | label positif paling sulit; kesalahan terbanyak di sekitar "perlu ditinjau" |
 | 13.2 | sebaran macro-F1 dari 1.000 kali bootstrap | skor uji berada di tengah sebaran, bukan kebetulan |
@@ -115,7 +160,7 @@ Tebakan XLM-RoBERTa untuk setiap fold dan setiap video disimpan di Google Drive 
 3. Bagian yang paling lama:
    - stemming: sekitar 2–3 menit
    - embedding e5-large: sekitar 1–2 menit (saat pertama kali, model sekitar 2 GB diunduh dulu)
-   - Bayesian Search: sekitar 10–30 menit
+   - Bayesian Search: sekitar 15–40 menit, karena TF-IDF dan SMOTE dijalankan ulang di setiap fold
    - XLM-RoBERTa: sekitar 5 menit per pelatihan, atau sekitar 1 jam untuk 5-fold CV dan uji lintas video jika belum ada hasil tersimpan di Drive
 
 ---
