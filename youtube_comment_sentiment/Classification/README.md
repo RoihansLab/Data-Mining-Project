@@ -171,6 +171,10 @@ print(svm.predict(angka))
 
 Hasilnya berupa label untuk setiap komentar: `positif`, `negatif`, atau `perlu ditinjau`.
 
+Model disimpan dengan scikit-learn di Google Colab. Jika muncul peringatan versi saat `joblib.load`, gunakan versi scikit-learn yang sama dengan Colab.
+
+---
+
 ## ▶️ Cara Menjalankan
 
 1. Buka notebook di **Google Colab** dengan runtime **GPU**, lalu pilih *Runtime → Run all*. Dataset diambil langsung dari GitHub, jadi tidak perlu upload file (butuh koneksi internet).
