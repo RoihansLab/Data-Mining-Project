@@ -153,6 +153,24 @@ Tebakan XLM-RoBERTa untuk setiap fold dan setiap video disimpan di Google Drive 
 
 ---
 
+## 🧪 Cara Memakai Model Akhir
+
+`model_svm_e5_large.pkl` hanya berisi model SVM. Komentar baru harus diubah dulu menjadi angka dengan **e5-large**, dengan cara yang sama seperti saat pelatihan: diberi awalan `"query: "` dan `normalize_embeddings=True`.
+
+```python
+import joblib
+from sentence_transformers import SentenceTransformer
+
+e5 = SentenceTransformer("intfloat/multilingual-e5-large")
+svm = joblib.load("model_svm_e5_large.pkl")
+
+komentar = ["Takut banget kerjaan gue diambil AI", "AI cuma alat, yang penting kita terus belajar"]
+angka = e5.encode(["query: " + k for k in komentar], normalize_embeddings=True)
+print(svm.predict(angka))
+```
+
+Hasilnya berupa label untuk setiap komentar: `positif`, `negatif`, atau `perlu ditinjau`.
+
 ## ▶️ Cara Menjalankan
 
 1. Buka notebook di **Google Colab** dengan runtime **GPU**, lalu pilih *Runtime → Run all*. Dataset diambil langsung dari GitHub, jadi tidak perlu upload file (butuh koneksi internet).
