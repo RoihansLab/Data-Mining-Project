@@ -148,7 +148,7 @@ Model dipilih berdasarkan tiga kriteria dari rumusan masalah:
 |---|---|
 | `classification_modeling.ipynb` | notebook utama: Bab 1 dan 6–14 |
 | `model_svm_e5_large.pkl` | model SVM akhir, **dibuat oleh notebook** (Bab 13.6) |
-| `hasil_xlm_cv/` | tebakan XLM-RoBERTa dari run terakhir: `fold_0–4.csv` (5-fold CV, Bab 11) dan `video_0–5.csv` (uji lintas video, Bab 12.2), disalin dari Google Drive |
+| `hasil_xlm_cv/` | tebakan XLM-RoBERTa dari run terakhir: `fold_0–4.csv` (5-fold CV, Bab 11) dan `video_0–5.csv` (uji lintas video, Bab 12.2), disalin dari Google Drive. Penjelasan kolom dan cara memakainya ada di [`hasil_xlm_cv/README.md`](hasil_xlm_cv/README.md) |
 
 Saat dijalankan, notebook menyimpan tebakan XLM-RoBERTa untuk setiap fold dan setiap video di Google Drive (`MyDrive/hasil_xlm_cv`), sehingga notebook bisa dijalankan ulang tanpa melatih XLM-RoBERTa dari awal. Supaya angka XLM-RoBERTa sama persis dengan hasil di README ini, salin isi folder `hasil_xlm_cv/` ke `MyDrive/hasil_xlm_cv` sebelum menjalankan notebook. Jika folder itu kosong, XLM-RoBERTa dilatih ulang dan hasilnya bisa sedikit berbeda (lihat Keterbatasan).
 
