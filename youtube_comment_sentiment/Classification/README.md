@@ -87,7 +87,7 @@ Model dipilih berdasarkan tiga kriteria dari rumusan masalah:
 |---|---|---|---|---|
 | **SVM linear + e5** | class weight | **0,648** | **0,102** | **0,586** |
 | Logistic Regression + e5 | class weight | 0,645 | 0,120 | 0,583 |
-| XLM-RoBERTa-large | bobot di *loss* | 0,632 | 0,127 | 0,558 |
+| XLM-RoBERTa-large | bobot di *loss* | 0,635 | 0,141 | 0,562 |
 | Naive Bayes + e5 | SMOTE | 0,592 | 0,039 | 0,510 |
 | Logistic Regression + TF-IDF | class weight | 0,579 | 0,380 | 0,472 |
 | SVM linear + TF-IDF | class weight | 0,570 | 0,422 | 0,452 |
@@ -148,8 +148,9 @@ Model dipilih berdasarkan tiga kriteria dari rumusan masalah:
 |---|---|
 | `classification_modeling.ipynb` | notebook utama: Bab 1 dan 6–14 |
 | `model_svm_e5_large.pkl` | model SVM akhir, **dibuat oleh notebook** (Bab 13.6) |
+| `hasil_xlm_cv/` | tebakan XLM-RoBERTa dari run terakhir: `fold_0–4.csv` (5-fold CV, Bab 11) dan `video_0–5.csv` (uji lintas video, Bab 12.2), disalin dari Google Drive |
 
-Tebakan XLM-RoBERTa untuk setiap fold dan setiap video disimpan di Google Drive (`MyDrive/hasil_xlm_cv`), sehingga notebook bisa dijalankan ulang tanpa melatih XLM-RoBERTa dari awal.
+Saat dijalankan, notebook menyimpan tebakan XLM-RoBERTa untuk setiap fold dan setiap video di Google Drive (`MyDrive/hasil_xlm_cv`), sehingga notebook bisa dijalankan ulang tanpa melatih XLM-RoBERTa dari awal. Supaya angka XLM-RoBERTa sama persis dengan hasil di README ini, salin isi folder `hasil_xlm_cv/` ke `MyDrive/hasil_xlm_cv` sebelum menjalankan notebook. Jika folder itu kosong, XLM-RoBERTa dilatih ulang dan hasilnya bisa sedikit berbeda (lihat Keterbatasan).
 
 ---
 
@@ -193,4 +194,5 @@ Model disimpan dengan scikit-learn di Google Colab. Jika muncul peringatan versi
 - Setiap komentar berlabel manual hanya dilabeli satu orang, sehingga kesepakatan antarpelabel manusia belum diukur.
 - Data hanya dari 6 video, dengan dua video berbahasa Indonesia.
 - XLM-RoBERTa tidak dioptimasi dengan Bayesian Search karena keterbatasan komputasi.
+- Hasil *fine-tuning* XLM-RoBERTa sedikit bervariasi antar-run meskipun *seed* sudah dikunci (42), karena perhitungan GPU (fp16) tidak sepenuhnya deterministik dan versi *library* di Google Colab bisa berubah. Run sebelumnya menghasilkan macro-F1 CV 0,632 dan lintas video 0,558, sedangkan run terakhir 0,635 dan 0,562. Perbedaan ini kecil dan tidak mengubah urutan model maupun kesimpulan.
 - Uji McNemar dihitung dari tebakan cross-validation, sehingga sedikit kurang ketat daripada uji pada satu data uji yang sama.
